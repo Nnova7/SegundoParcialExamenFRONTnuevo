@@ -57,80 +57,121 @@ document.addEventListener("DOMContentLoaded", function () {
   // ===============================
   // LOGIN
   // ===============================
-  if (loginForm) {
-    loginForm.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      const usuario = document.getElementById("username").value;
-      const password = document.getElementById("password").value;
+  // ===============================
+// LOGIN (corregido)
+// ===============================
+if (loginForm) {
+  loginForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-      const result = await login(usuario, password);
+    const cuenta = document.getElementById("username").value.trim();
+    const contrasena = document.getElementById("password").value.trim();
 
-      if (result.ok) {
-        // Guardar usuario en sesión
-        currentUser = { 
-          cuenta: usuario,
-          pago: result.data.user.pago // ← Esto viene del backend
+    if (!cuenta || !contrasena) {
+      showAlert("Campos vacíos", "Por favor, ingrese usuario y contraseña.", "warning");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cuenta, contrasena })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.usuario) {
+        // ✅ GUARDAR DATOS DEL USUARIO EN LOCALSTORAGE
+        currentUser = {
+          cuenta: data.usuario.cuenta,
+          nombreCompleto: data.usuario.nombre,
+          pago: data.usuario.pago || false,
+          intento: data.usuario.intento || false
         };
-        paymentStatus = result.data.user.pago; // ← Estado real del backend
+
+        paymentStatus = currentUser.pago;
+        examTaken = currentUser.intento;
 
         localStorage.setItem("currentUser", JSON.stringify(currentUser));
         localStorage.setItem("paymentStatus", paymentStatus.toString());
         localStorage.setItem("examTaken", examTaken.toString());
 
-        if (userDisplay) userDisplay.textContent = usuario;
-        if (loginBtn) loginBtn.style.display = "none";
-        if (logoutBtn) logoutBtn.style.display = "inline-block";
+        // Actualizar interfaz
+        updateUserInterface();
+
+        // Cerrar modal
         if (loginModal) loginModal.style.display = "none";
 
-        showAlert("Acceso permitido", result.data.message, "success");
+        showAlert("Acceso permitido", `Bienvenido ${currentUser.nombreCompleto}`, "success");
       } else {
-        showAlert("Error", result.data.message, "error");
+        showAlert("Acceso denegado", data.message || "Usuario o contraseña incorrectos.", "error");
       }
 
-      loginForm.reset();
-    });
-  }
+    } catch (error) {
+      console.error("❌ Error al conectar con el servidor:", error);
+      showAlert("Error de conexión", "No se pudo conectar con el servidor.", "error");
+    }
+
+    loginForm.reset();
+  });
+}
+
 
   // ===============================
   // LOGOUT
   // ===============================
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", async function () {
-      // Detener timer del examen si está activo
-      if (examTimer) {
-        clearInterval(examTimer);
-        examTimer = null;
+  logoutBtn.addEventListener("click", async function () {
+    // 🕒 Detener timer del examen si está activo
+    if (typeof examTimer !== "undefined" && examTimer) {
+      clearInterval(examTimer);
+      examTimer = null;
+    }
+
+    // 🔐 Cerrar sesión en el backend (si hay usuario)
+    if (currentUser) {
+      try {
+        await logoutBackend(); // No necesita pasar currentUser.cuenta
+      } catch (error) {
+        console.error("Error al cerrar sesión en el backend:", error);
       }
+    }
 
-      if (currentUser) await logoutBackend(currentUser.cuenta);
+    // 🧹 Limpiar estado local
+    currentUser = null;
+    paymentStatus = false;
+    examTaken = false;
 
-      currentUser = null;
-      paymentStatus = false;
-      examTaken = false;
+    // 🗑️ Limpiar localStorage
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("paymentStatus");
+    localStorage.removeItem("examTaken");
+    localStorage.removeItem("examActive");
+    localStorage.removeItem("examStartTime");
 
-      localStorage.removeItem("currentUser");
-      localStorage.removeItem("paymentStatus");
-      localStorage.removeItem("examTaken");
+    // 🧭 Actualizar interfaz
+    if (userDisplay) userDisplay.textContent = "Invitado";
+    if (loginBtn) loginBtn.style.display = "inline-block";
+    if (logoutBtn) logoutBtn.style.display = "none";
 
-      if (userDisplay) userDisplay.textContent = "Invitado";
-      if (loginBtn) loginBtn.style.display = "inline-block";
-      if (logoutBtn) logoutBtn.style.display = "none";
+    if (examBtn) {
+      examBtn.disabled = true;
+      examBtn.textContent = "Iniciar Examen";
+      examBtn.classList.remove("btn-disabled", "btn-secondary");
+      examBtn.classList.add("btn-secondary");
+    }
 
-      if (examBtn) {
-        examBtn.disabled = true;
-        examBtn.textContent = "Iniciar Examen";
-        examBtn.classList.remove("btn-disabled", "btn-secondary");
-        examBtn.classList.add("btn-secondary");
-      }
+    // ❌ Cerrar modal de examen si está abierto
+    if (typeof examModal !== "undefined" && examModal) {
+      examModal.style.display = "none";
+    }
 
-      // Cerrar modal de examen si está abierto
-      if (examModal) {
-        examModal.style.display = "none";
-      }
-
-      showAlert("Sesión cerrada", "Has cerrado sesión correctamente", "info");
-    });
-  }
+    // ✅ Confirmación final
+    showAlert("Sesión cerrada", "Has cerrado sesión correctamente", "info");
+  });
+}
 
   // ===============================
   // PAGO DE CERTIFICACIÓN
