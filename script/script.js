@@ -78,14 +78,18 @@ document.addEventListener("DOMContentLoaded", function () {
             nombreCompleto: data.usuario.nombre,
             pago: data.usuario.pago || false,
             intento: data.usuario.intento || false,
+            aprobado: data.usuario.aprobado || false,
           };
 
           paymentStatus = currentUser.pago;
           examTaken = currentUser.intento;
+          examApproved = currentUser.aprobado;
 
           localStorage.setItem("currentUser", JSON.stringify(currentUser));
           localStorage.setItem("paymentStatus", paymentStatus.toString());
           localStorage.setItem("examTaken", examTaken.toString());
+          localStorage.setItem("examApproved", examApproved.toString());
+          
           if (data.token) {
             localStorage.setItem("authToken", data.token);
             console.log("🔑 Token guardado correctamente.");
@@ -111,7 +115,20 @@ document.addEventListener("DOMContentLoaded", function () {
   // ===============================
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async function () {
-      if (examTimer) clearInterval(examTimer);
+      if (examTimer) {
+        clearInterval(examTimer);
+        examTimer = null;
+      }
+
+      // Mostrar confirmación
+      const confirmacion = await showConfirm(
+        "Cerrar Sesión",
+        "¿Estás seguro de que deseas cerrar sesión?",
+        "Sí, Cerrar",
+        "Cancelar"
+      );
+
+      if (!confirmacion.isConfirmed) return;
 
       if (currentUser) {
         try {
@@ -125,17 +142,18 @@ document.addEventListener("DOMContentLoaded", function () {
       currentUser = null;
       paymentStatus = false;
       examTaken = false;
-      localStorage.clear();
+      examApproved = false;
+      examQuestions = [];
+      examTimeLeft = 10800;
+      
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("paymentStatus");
+      localStorage.removeItem("examTaken");
+      localStorage.removeItem("examApproved");
+      localStorage.removeItem("authToken");
 
-      userDisplay.textContent = "Invitado";
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-
-      if (examBtn) {
-        examBtn.disabled = true;
-        examBtn.textContent = "Iniciar Examen";
-      }
-
+      updateUserInterface();
+      
       if (examModal) examModal.style.display = "none";
       showAlert("Sesión cerrada", "Has cerrado sesión correctamente", "info");
     });
@@ -167,15 +185,25 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!confirmacion.isConfirmed) return;
 
       try {
-        Swal.fire({ title: "Procesando pago...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        Swal.fire({ 
+          title: "Procesando pago...", 
+          allowOutsideClick: false, 
+          didOpen: () => Swal.showLoading() 
+        });
 
         const token = localStorage.getItem("authToken");
+        if (!token) {
+          Swal.close();
+          showAlert("Error de autenticación", "Token no encontrado. Por favor, inicie sesión nuevamente.", "error");
+          return;
+        }
+
         const res = await fetch("http://localhost:3000/api/pago/confirmar", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
-          },
+          }
         });
 
         const data = await res.json();
@@ -184,16 +212,12 @@ document.addEventListener("DOMContentLoaded", function () {
         if (res.ok) {
           paymentStatus = true;
           currentUser.pago = true;
+          
           localStorage.setItem("paymentStatus", "true");
           localStorage.setItem("currentUser", JSON.stringify(currentUser));
 
-          payBtn.textContent = "Pagado";
-          payBtn.disabled = true;
-          payBtn.classList.replace("btn-primary", "btn-disabled");
-
+          updateUserInterface();
           showAlert("Pago exitoso", data.msg || "Pago realizado correctamente.", "success");
-          examBtn.disabled = false;
-          examBtn.classList.replace("btn-disabled", "btn-secondary");
         } else {
           showAlert("Error en el pago", data.msg || "No se pudo procesar el pago.", "error");
         }
@@ -225,7 +249,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const confirmacion = await showConfirm(
         "Iniciar Examen",
-        "Duración: 3 horas. ¿Deseas comenzar?",
+        "Duración: 20 minutos. ¿Deseas comenzar?",
         "Comenzar",
         "Cancelar"
       );
@@ -235,43 +259,356 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===============================
+  // FUNCIÓN PARA INICIAR EL EXAMEN
+  // ===============================
+  async function startExam() {
+    try {
+      console.log("📥 Iniciando examen desde el servidor...");
+
+      // Token del usuario logueado
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        showAlert("Sesión expirada", "Debe iniciar sesión nuevamente", "warning");
+        return;
+      }
+
+      // Solicitar examen al backend
+      const res = await fetch("http://localhost:3000/api/examen/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showAlert("Error", data.msg || "No se pudo iniciar el examen", "error");
+        return;
+      }
+
+      // Guardar las preguntas recibidas
+      examQuestions = data.examen || [];
+      console.log(`✅ ${examQuestions.length} preguntas cargadas desde el backend`);
+
+      if (examQuestions.length === 0) {
+        showAlert("Error", "No se pudieron cargar las preguntas del examen", "error");
+        return;
+      }
+
+      // Obtener tiempo del examen desde el backend
+      try {
+        const tiempoRes = await fetch("http://localhost:3000/api/examen/tiempo", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (tiempoRes.ok) {
+          const tiempoData = await tiempoRes.json();
+          const minutosDesdeBack = tiempoData.minutos || 20;
+          examTimeLeft = minutosDesdeBack * 60;
+          console.log(`⏱ Tiempo del examen: ${minutosDesdeBack} minutos`);
+        } else {
+          throw new Error("No se pudo obtener el tiempo");
+        }
+      } catch (error) {
+        console.error("⚠ No se pudo obtener el tiempo desde el backend, usando valor por defecto (20 min).");
+        examTimeLeft = 20 * 60;
+      }
+
+      updateExamTimer();
+
+      // Iniciar el temporizador
+      if (examTimer) {
+        clearInterval(examTimer);
+      }
+      
+      examTimer = setInterval(function () {
+        examTimeLeft--;
+        updateExamTimer();
+
+        if (examTimeLeft <= 0) {
+          clearInterval(examTimer);
+          examTimer = null;
+          autoSubmitExam();
+        }
+      }, 1000);
+
+      // Mostrar las preguntas en pantalla
+      if (examModal) {
+        loadExamQuestions();
+        examModal.style.display = "flex";
+      }
+
+      console.log("🚀 Examen iniciado para:", currentUser.cuenta);
+    } catch (error) {
+      console.error("❌ Error al iniciar el examen:", error);
+      showAlert("Error", "No se pudieron cargar las preguntas del examen", "error");
+    }
+  }
+
+  // ===============================
+  // CARGAR PREGUNTAS DEL EXAMEN
+  // ===============================
+  function loadExamQuestions() {
+    if (!examQuestionsContainer) return;
+
+    let questionsHTML = '';
+    examQuestions.forEach((q, index) => {
+      questionsHTML += `
+        <div class="question" data-question-id="${q.id}">
+          <h3>Pregunta ${index + 1}: ${q.texto || 'Pregunta sin texto'}</h3>
+          <div class="options">
+            ${(q.opciones || []).map(option => `
+              <label class="option">
+                <input type="radio" name="question-${q.id}" value="${option}">
+                ${option}
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        <hr>
+      `;
+    });
+
+    examQuestionsContainer.innerHTML = questionsHTML;
+  }
+
+  // ===============================
+  // ACTUALIZAR TIMER DEL EXAMEN
+  // ===============================
+  function updateExamTimer() {
+    if (!examTimerDisplay) return;
+
+    const hours = Math.floor(examTimeLeft / 3600);
+    const minutes = Math.floor((examTimeLeft % 3600) / 60);
+    const seconds = examTimeLeft % 60;
+
+    examTimerDisplay.textContent = 
+      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    // Cambiar color cuando quede poco tiempo
+    if (examTimeLeft < 300) { // 5 minutos
+      examTimerDisplay.style.color = 'red';
+      examTimerDisplay.style.fontWeight = 'bold';
+    } else {
+      examTimerDisplay.style.color = '';
+      examTimerDisplay.style.fontWeight = '';
+    }
+  }
+
+  // ===============================
+  // ENVIAR EXAMEN
+  // ===============================
+  if (submitExamBtn) {
+    submitExamBtn.addEventListener("click", async function() {
+      const confirmacion = await showConfirm(
+        "Enviar Examen",
+        "¿Estás seguro de que deseas enviar el examen?",
+        "Sí, Enviar",
+        "Cancelar"
+      );
+      
+      if (confirmacion.isConfirmed) {
+        await submitExam();
+      }
+    });
+  }
+
+  // ===============================
+  // FUNCIÓN PARA ENVIAR EXAMEN (CORREGIDA)
+  // ===============================
+  async function submitExam() {
+    try {
+      // Recopilar respuestas
+      const respuestas = [];
+      const questionElements = document.querySelectorAll('.question');
+      
+      questionElements.forEach(questionElement => {
+        const questionId = questionElement.dataset.questionId;
+        const selectedOption = questionElement.querySelector('input[type="radio"]:checked');
+        
+        if (selectedOption) {
+          respuestas.push({
+            preguntaId: questionId,
+            respuesta: selectedOption.value
+          });
+        } else {
+          respuestas.push({
+            preguntaId: questionId,
+            respuesta: "" // Respuesta vacía si no respondió
+          });
+        }
+      });
+
+      console.log("📤 Enviando respuestas:", respuestas);
+
+      // Enviar respuestas al backend
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:3000/api/examen/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          respuestas: respuestas,
+          tiempoUtilizado: 10800 - examTimeLeft
+        })
+      });
+
+      const data = await response.json();
+
+      // ✅ DEBUG: Mostrar respuesta completa del backend
+      console.log("🔍 RESPUESTA COMPLETA DEL BACKEND:", data);
+      console.log("📋 PROPIEDADES DISPONIBLES:", Object.keys(data));
+      console.log("❓ ¿Existe data.aprobado?:", 'aprobado' in data);
+      console.log("🎯 Valor de data.aprobado:", data.aprobado);
+
+      if (response.ok) {
+        // Limpiar temporizador
+        if (examTimer) {
+          clearInterval(examTimer);
+          examTimer = null;
+        }
+
+        // ✅ CORREGIDO: Manejo robusto de la propiedad aprobado
+        examApproved = data.aprobado !== undefined ? data.aprobado : false;
+        examTaken = true;
+        
+        localStorage.setItem('examTaken', 'true');
+        localStorage.setItem('examApproved', examApproved.toString());
+
+        // Actualizar usuario actual
+        if (currentUser) {
+          currentUser.intento = true;
+          currentUser.aprobado = examApproved;
+          localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+
+        // Cerrar modal
+        const examModal = document.getElementById('exam-modal');
+        if (examModal) examModal.style.display = 'none';
+
+        // Mostrar resultado con información detallada
+        console.log("📊 Resultado final del examen:", {
+          aprobado: examApproved,
+          calificacion: data.calificacion,
+          aciertos: data.aciertos,
+          total: data.totalPreguntas,
+          mensaje: data.mensaje
+        });
+
+        showAlert(
+          'Examen Finalizado', 
+          `Has ${examApproved ? 'APROBADO' : 'REPROBADO'} el examen.\n` +
+          `${data.aciertos}/${data.totalPreguntas} aciertos (${data.calificacion}%)\n` +
+          `${data.mensaje || ''}`,
+          examApproved ? 'success' : 'error'
+        );
+
+        // Actualizar interfaz
+        updateUserInterface();
+
+      } else {
+        showAlert('Error', data.msg || 'Error al enviar el examen', 'error');
+      }
+
+    } catch (error) {
+      console.error('Error al enviar examen:', error);
+      showAlert('Error', 'No se pudo enviar el examen. Verifica la conexión.', 'error');
+    }
+  }
+
+  // ===============================
+  // ENVÍO AUTOMÁTICO AL TERMINAR EL TIEMPO
+  // ===============================
+  function autoSubmitExam() {
+    showAlert("Tiempo agotado", "El tiempo del examen ha terminado. Se enviarán tus respuestas automáticamente.", "warning");
+    submitExam();
+  }
+
+  // ===============================
+  // CERRAR MODAL DE EXAMEN
+  // ===============================
+  if (closeExamModal) {
+    closeExamModal.addEventListener("click", function() {
+      if (examModal) {
+        const confirmacion = confirm("¿Estás seguro de que deseas cerrar el examen? El progreso se perderá.");
+        if (confirmacion) {
+          if (examTimer) {
+            clearInterval(examTimer);
+            examTimer = null;
+          }
+          examModal.style.display = "none";
+        }
+      }
+    });
+  }
+
+  // ===============================
   // CONTACTO
   // ===============================
   if (contactForm) {
     contactForm.addEventListener("submit", async function (e) {
       e.preventDefault();
-      const nombre = document.getElementById("name").value;
-      const correo = document.getElementById("email").value;
-      const mensaje = document.getElementById("message").value;
+      
+      const nombre = document.getElementById("name").value.trim();
+      const correo = document.getElementById("email").value.trim();
+      const mensaje = document.getElementById("message").value.trim();
 
-      const response = await enviarContactoBackend(nombre, correo, mensaje);
-      showAlert("Mensaje Enviado", response.message, "success");
+      if (!nombre || !correo || !mensaje) {
+        showAlert("Campos incompletos", "Por favor, complete todos los campos.", "warning");
+        return;
+      }
 
-      contactMessages.push({ nombre, correo, mensaje });
-      contactForm.reset();
+      if (!isValidEmail(correo)) {
+        showAlert("Email inválido", "Por favor, ingrese un email válido.", "warning");
+        return;
+      }
+
+      try {
+        const response = await enviarContactoBackend(nombre, correo, mensaje);
+        showAlert("Mensaje Enviado", response.message, "success");
+
+        contactMessages.push({ nombre, correo, mensaje, fecha: new Date().toISOString() });
+        contactForm.reset();
+      } catch (error) {
+        showAlert("Error", "No se pudo enviar el mensaje. Intente nuevamente.", "error");
+      }
     });
   }
 
   // ===============================
-  // CERRAR MODALES
+  // CERRAR MODALES AL HACER CLIC FUERA
   // ===============================
   window.addEventListener("click", (e) => {
     if (e.target === loginModal) loginModal.style.display = "none";
-    if (e.target === examModal) examModal.style.display = "none";
+    if (e.target === examModal) {
+      const confirmacion = confirm("¿Estás seguro de que deseas cerrar? El progreso del examen se perderá.");
+      if (confirmacion) {
+        if (examTimer) {
+          clearInterval(examTimer);
+          examTimer = null;
+        }
+        examModal.style.display = "none";
+      }
+    }
   });
 
   // ===============================
   // IMPRIMIR CERTIFICADO
   // ===============================
   const btnImprimir = document.getElementById("btn-imprimir");
-  if (btnImprimir)
+  if (btnImprimir) {
     btnImprimir.addEventListener("click", function () {
       if (currentUser && examApproved) {
         window.print();
       } else {
-        showAlert("Acceso denegado", "Debes aprobar el examen", "warning");
+        showAlert("Acceso denegado", "Debes aprobar el examen para imprimir el certificado", "warning");
       }
     });
+  }
 });
 
 // ===============================
@@ -279,33 +616,77 @@ document.addEventListener("DOMContentLoaded", function () {
 // ===============================
 async function loadSession() {
   const savedUser = localStorage.getItem("currentUser");
-  if (savedUser) {
-    currentUser = JSON.parse(savedUser);
-    const token = localStorage.getItem("authToken");
-
+  const savedToken = localStorage.getItem("authToken");
+  
+  if (savedUser && savedToken) {
     try {
-      const res = await fetch(`http://localhost:3000/api/usuario/${currentUser.cuenta}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      currentUser = JSON.parse(savedUser);
+      paymentStatus = localStorage.getItem("paymentStatus") === "true";
+      examTaken = localStorage.getItem("examTaken") === "true";
+      examApproved = localStorage.getItem("examApproved") === "true";
+
+      // Verificar token con el backend
+      const verifyRes = await fetch("http://localhost:3000/api/auth/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${savedToken}`
+        }
       });
 
-      if (res.ok) {
-        const userState = await res.json();
-        paymentStatus = userState.pago;
-        examTaken = userState.intento;
-        examApproved = userState.aprobado;
+      if (verifyRes.ok) {
+        // Token válido, sincronizar datos del usuario
+        const userRes = await fetch(`http://localhost:3000/api/auth/user`, {
+          headers: {
+            Authorization: `Bearer ${savedToken}`
+          }
+        });
+
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          // Actualizar datos locales con los del servidor
+          if (userData.usuario) {
+            paymentStatus = userData.usuario.pago || false;
+            examTaken = userData.usuario.intento || false;
+            examApproved = userData.usuario.aprobado || false;
+            
+            // Actualizar currentUser
+            currentUser.pago = paymentStatus;
+            currentUser.intento = examTaken;
+            currentUser.aprobado = examApproved;
+            
+            // Actualizar localStorage
+            localStorage.setItem("currentUser", JSON.stringify(currentUser));
+            localStorage.setItem("paymentStatus", paymentStatus.toString());
+            localStorage.setItem("examTaken", examTaken.toString());
+            localStorage.setItem("examApproved", examApproved.toString());
+          }
+        }
+      } else {
+        // Token inválido, limpiar sesión
+        console.warn("Token inválido, limpiando sesión");
+        localStorage.clear();
+        currentUser = null;
+        paymentStatus = false;
+        examTaken = false;
+        examApproved = false;
       }
-    } catch (e) {
-      console.warn("⚠️ Error sincronizando con backend, usando datos locales");
+    } catch (error) {
+      console.warn("⚠️ Error verificando sesión, usando datos locales:", error);
+      // En caso de error, usar datos locales
+      currentUser = JSON.parse(savedUser);
+      paymentStatus = localStorage.getItem("paymentStatus") === "true";
+      examTaken = localStorage.getItem("examTaken") === "true";
+      examApproved = localStorage.getItem("examApproved") === "true";
     }
 
     updateUserInterface();
-    checkPrintButton();
-    console.log("Sesión cargada para:", currentUser.cuenta);
+    console.log("Sesión cargada para:", currentUser?.nombreCompleto);
   }
 }
 
 // ===============================
-// FUNCIONES AUXILIARES
+// ACTUALIZAR INTERFAZ DE USUARIO
 // ===============================
 function updateUserInterface() {
   const userDisplay = document.getElementById("user-display");
@@ -313,36 +694,106 @@ function updateUserInterface() {
   const logoutBtn = document.getElementById("logout-btn");
   const payBtn = document.getElementById("pay-btn-fullstack");
   const examBtn = document.getElementById("exam-btn-fullstack");
+  const printBtn = document.getElementById("btn-imprimir");
 
-  if (userDisplay) userDisplay.textContent = currentUser?.cuenta || "Invitado";
-  if (loginBtn) loginBtn.style.display = "none";
-  if (logoutBtn) logoutBtn.style.display = "inline-block";
+  if (currentUser) {
+    if (userDisplay) userDisplay.textContent = currentUser.cuenta || currentUser.nombreCompleto || "Usuario";
+    if (loginBtn) loginBtn.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "inline-block";
 
-  if (payBtn && paymentStatus) {
-    payBtn.textContent = "Pagado";
-    payBtn.disabled = true;
-  }
+    // Actualizar botón de pago
+    if (payBtn) {
+      if (paymentStatus) {
+        payBtn.textContent = "Pagado";
+        payBtn.disabled = true;
+        payBtn.classList.remove("btn-primary");
+        payBtn.classList.add("btn-disabled");
+      } else {
+        payBtn.textContent = "Pagar $3000 MX";
+        payBtn.disabled = false;
+        payBtn.classList.remove("btn-disabled");
+        payBtn.classList.add("btn-primary");
+      }
+    }
 
-  if (examBtn) {
-    examBtn.disabled = !(paymentStatus && !examTaken);
-    examBtn.textContent = examTaken ? "Examen Realizado" : "Iniciar Examen";
+    // Actualizar botón de examen
+    if (examBtn) {
+      if (examTaken) {
+        examBtn.textContent = "Examen Realizado";
+        examBtn.disabled = true;
+        examBtn.classList.remove("btn-secondary");
+        examBtn.classList.add("btn-disabled");
+      } else if (paymentStatus) {
+        examBtn.textContent = "Iniciar Examen";
+        examBtn.disabled = false;
+        examBtn.classList.remove("btn-disabled");
+        examBtn.classList.add("btn-secondary");
+      } else {
+        examBtn.textContent = "Iniciar Examen";
+        examBtn.disabled = true;
+        examBtn.classList.remove("btn-secondary");
+        examBtn.classList.add("btn-disabled");
+      }
+    }
+
+    // Actualizar botón de imprimir
+    if (printBtn) {
+      printBtn.style.display = examApproved ? "inline-block" : "none";
+    }
+  } else {
+    // Usuario no logueado
+    if (userDisplay) userDisplay.textContent = "Invitado";
+    if (loginBtn) loginBtn.style.display = "inline-block";
+    if (logoutBtn) logoutBtn.style.display = "none";
+    
+    if (payBtn) {
+      payBtn.textContent = "Pagar $3000 MX";
+      payBtn.disabled = false;
+    }
+    
+    if (examBtn) {
+      examBtn.textContent = "Iniciar Examen";
+      examBtn.disabled = true;
+    }
+    
+    if (printBtn) printBtn.style.display = "none";
   }
 }
 
-function checkPrintButton() {
-  const btn = document.getElementById("btn-imprimir");
-  if (btn) btn.style.display = currentUser && examApproved ? "inline-block" : "none";
-}
-
+// ===============================
+// FUNCIONES AUXILIARES
+// ===============================
 function showAlert(title, text, icon = "info") {
-  if (typeof Swal !== "undefined") return Swal.fire({ title, text, icon });
+  if (typeof Swal !== "undefined") {
+    return Swal.fire({ 
+      title, 
+      text, 
+      icon,
+      confirmButtonText: 'Aceptar'
+    });
+  }
   alert(`${title}: ${text}`);
 }
 
-function showConfirm(title, text, confirm = "Sí", cancel = "Cancelar") {
-  if (typeof Swal !== "undefined")
-    return Swal.fire({ title, text, icon: "question", showCancelButton: true, confirmButtonText: confirm, cancelButtonText: cancel });
-  return Promise.resolve({ isConfirmed: confirm(`${title}: ${text}`) });
+async function showConfirm(title, text, confirmText = "Sí", cancelText = "Cancelar") {
+  if (typeof Swal !== "undefined") {
+    return await Swal.fire({ 
+      title, 
+      text, 
+      icon: "question", 
+      showCancelButton: true, 
+      confirmButtonText: confirmText, 
+      cancelButtonText: cancelText 
+    });
+  }
+  
+  const result = confirm(`${title}: ${text}`);
+  return { isConfirmed: result };
+}
+
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
 // ===============================
@@ -350,13 +801,18 @@ function showConfirm(title, text, confirm = "Sí", cancel = "Cancelar") {
 // ===============================
 async function logoutBackend(usuario) {
   try {
-    await fetch("http://localhost:3000/api/logout", {
+    const token = localStorage.getItem("authToken");
+    await fetch("http://localhost:3000/api/auth/logout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
       body: JSON.stringify({ usuario }),
     });
   } catch (error) {
     console.error("Error al cerrar sesión:", error);
+    throw error;
   }
 }
 
@@ -367,8 +823,14 @@ async function enviarContactoBackend(nombre, correo, mensaje) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, email: correo, mensaje }),
     });
+    
+    if (!res.ok) {
+      throw new Error(`Error ${res.status}: ${res.statusText}`);
+    }
+    
     return await res.json();
-  } catch {
-    return { message: "Error al enviar contacto al servidor." };
+  } catch (error) {
+    console.error("Error al enviar contacto:", error);
+    throw error;
   }
 }
