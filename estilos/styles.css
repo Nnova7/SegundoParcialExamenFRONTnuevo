@@ -1169,7 +1169,7 @@ nav ul {
 }
 
 .exam-header {
-  background: #f8f9fa;
+  background: #2b3137;
   padding: 15px;
   border-radius: 5px;
   margin-bottom: 20px;
@@ -1250,3 +1250,28 @@ nav ul {
   background-color: #f8d7da;
   border: 1px solid #f5c6cb;
 }
+
+/*---------------------------------------------------------------------------*/
+/* =========================
+   BOTÓN DE EXAMEN AZUL
+   ========================= */
+.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: #fff;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3);
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0056b3, #004094);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 91, 187, 0.4);
+}
+

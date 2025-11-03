@@ -8,6 +8,7 @@ let contactMessages = [];
 let examTimer = null;
 let examTimeLeft = 10800; // 3 horas en segundos (3 * 60 * 60)
 let examQuestions = [];
+let examApproved = false;
 
 // =====================================
 // INICIALIZACIÓN DESPUÉS DEL DOM
@@ -66,7 +67,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (result.ok) {
         // Guardar usuario en sesión
-        currentUser = { cuenta: usuario };
+        currentUser = { 
+          cuenta: usuario,
+          pago: result.data.user.pago // ← Esto viene del backend
+        };
+        paymentStatus = result.data.user.pago; // ← Estado real del backend
+
         localStorage.setItem("currentUser", JSON.stringify(currentUser));
         localStorage.setItem("paymentStatus", paymentStatus.toString());
         localStorage.setItem("examTaken", examTaken.toString());
@@ -274,9 +280,18 @@ document.addEventListener("DOMContentLoaded", function () {
         examBtn.classList.add("btn-disabled");
       }
 
-      // Inicializar timer
-      examTimeLeft = 10800; // 3 horas
-      updateExamTimer();
+      try {
+  const tiempoRes = await fetch("http://localhost:3000/api/examen/tiempo");
+  const tiempoData = await tiempoRes.json();
+  const minutosDesdeBack = tiempoData.minutos || 20; // valor por defecto si falla
+  examTimeLeft = minutosDesdeBack * 60; // convertir a segundos
+  console.log( 'Tiempo del examen obtenido del backend: ${minutosDesdeBack} minutos');
+} catch (error) {
+  console.error("⚠ No se pudo obtener el tiempo desde el backend, usando valor por defecto (3h).");
+  examTimeLeft = 20 * 60;
+}
+
+updateExamTimer();
 
       // Iniciar el timer
       examTimer = setInterval(function() {
@@ -410,6 +425,22 @@ document.addEventListener("DOMContentLoaded", function () {
       examModal.style.display = "none";
     }
   });
+
+  // ===============================
+  // BOTÓN IMPRIMIR CERTIFICADO
+  // ===============================
+  const btnImprimir = document.getElementById("btn-imprimir");
+  if (btnImprimir) {
+    btnImprimir.addEventListener("click", function() {
+      if (currentUser && examApproved) {
+        // Aquí puedes redirigir a una página de certificado o imprimir directamente
+        window.print();
+        console.log("📄 Imprimiendo certificado para:", currentUser.cuenta);
+      } else {
+        showAlert("Acceso denegado", "Debes aprobar el examen para imprimir tu certificado", "warning");
+      }
+    });
+  }
 });
 
 // =====================================
@@ -472,6 +503,14 @@ async function submitExam() {
     }
 
     if (res.ok) {
+      //ACTUALIZAR ESTADO DE APROBACIÓN
+      examApproved = data.aprobado;
+      localStorage.setItem("examApproved", examApproved.toString());
+      
+      //
+      //VERIFICAR BOTÓN DE IMPRIMIR
+      checkPrintButton();
+
       // Cerrar modal de examen
       const examModal = document.getElementById("exam-modal");
       if (examModal) {
@@ -580,47 +619,101 @@ async function enviarContactoBackend(nombre, correo, mensaje) {
 // =====================================
 // FUNCIÓN PARA CARGAR SESIÓN GUARDADA
 // =====================================
-function loadSession() {
+async function loadSession() {
   const savedUser = localStorage.getItem("currentUser");
-  const savedPaymentStatus = localStorage.getItem("paymentStatus");
-  const savedExamTaken = localStorage.getItem("examTaken");
 
   if (savedUser) {
     currentUser = JSON.parse(savedUser);
-    paymentStatus = savedPaymentStatus === "true";
-    examTaken = savedExamTaken === "true";
-
-    const userDisplay = document.getElementById("user-display");
-    const loginBtn = document.getElementById("login-btn");
-    const logoutBtn = document.getElementById("logout-btn");
-    const payBtn = document.getElementById("pay-btn-fullstack");
-    const examBtn = document.getElementById("exam-btn-fullstack");
-
-    if (userDisplay) userDisplay.textContent = currentUser.cuenta;
-    if (loginBtn) loginBtn.style.display = "none";
-    if (logoutBtn) logoutBtn.style.display = "inline-block";
-
-    if (payBtn && paymentStatus) {
-      payBtn.textContent = "Pagado";
-      payBtn.disabled = true;
-      payBtn.classList.remove("btn-primary");
-      payBtn.classList.add("btn-disabled");
-    }
-
-    if (examBtn) {
-      if (paymentStatus && !examTaken) {
-        examBtn.disabled = false;
-        examBtn.classList.remove("btn-disabled");
-        examBtn.classList.add("btn-secondary");
-      } else if (examTaken) {
-        examBtn.disabled = true;
-        examBtn.textContent = "Examen Realizado";
-        examBtn.classList.remove("btn-secondary");
-        examBtn.classList.add("btn-disabled");
+    
+    console.log("🔄 Sincronizando con backend...");
+    
+    try {
+      // Obtener estado REAL del backend
+      const res = await fetch(`http://localhost:3000/api/usuario/${currentUser.cuenta}`);
+      if (res.ok) {
+        const userState = await res.json();
+        
+        // Sincronizar con backend
+        paymentStatus = userState.pago;
+        examTaken = userState.intento;
+        examApproved = userState.aprobado;
+        
+        // Actualizar localStorage con datos REALES del backend
+        localStorage.setItem("paymentStatus", paymentStatus.toString());
+        localStorage.setItem("examTaken", examTaken.toString());
+        localStorage.setItem("examApproved", examApproved.toString());
+        
+        console.log("✅ Sincronizado con backend:", userState);
+      } else {
+        throw new Error('No se pudo obtener estado del backend');
       }
+    } catch (error) {
+      console.log("⚠️ Error sincronizando, usando estado local");
+      // Usar estado local como fallback
+      const savedPaymentStatus = localStorage.getItem("paymentStatus");
+      const savedExamTaken = localStorage.getItem("examTaken");
+      const savedExamApproved = localStorage.getItem("examApproved");
+      
+      paymentStatus = savedPaymentStatus === "true";
+      examTaken = savedExamTaken === "true";
+      examApproved = savedExamApproved === "true";
     }
 
+    updateUserInterface();
+    checkPrintButton();
     console.log("Sesión cargada para:", currentUser.cuenta);
+  }
+}
+
+// =====================================
+// FUNCIÓN PARA VERIFICAR BOTÓN DE IMPRIMIR
+// =====================================
+function checkPrintButton() {
+  const btnImprimir = document.getElementById("btn-imprimir");
+  
+  if (btnImprimir) {
+    // Mostrar botón solo si: usuario logueado Y examen aprobado
+    if (currentUser && examApproved) {
+      btnImprimir.style.display = "inline-block";
+      console.log("🖨️ Botón de imprimir habilitado - Usuario aprobó el examen");
+    } else {
+      btnImprimir.style.display = "none";
+    }
+  }
+}
+
+// =====================================
+// FUNCIÓN PARA ACTUALIZAR INTERFAZ DE USUARIO
+// =====================================
+function updateUserInterface() {
+  const userDisplay = document.getElementById("user-display");
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const payBtn = document.getElementById("pay-btn-fullstack");
+  const examBtn = document.getElementById("exam-btn-fullstack");
+
+  if (userDisplay) userDisplay.textContent = currentUser.cuenta;
+  if (loginBtn) loginBtn.style.display = "none";
+  if (logoutBtn) logoutBtn.style.display = "inline-block";
+
+  if (payBtn && paymentStatus) {
+    payBtn.textContent = "Pagado";
+    payBtn.disabled = true;
+    payBtn.classList.remove("btn-primary");
+    payBtn.classList.add("btn-disabled");
+  }
+
+  if (examBtn) {
+    if (paymentStatus && !examTaken) {
+      examBtn.disabled = false;
+      examBtn.classList.remove("btn-disabled");
+      examBtn.classList.add("btn-secondary");
+    } else if (examTaken) {
+      examBtn.disabled = true;
+      examBtn.textContent = "Examen Realizado";
+      examBtn.classList.remove("btn-secondary");
+      examBtn.classList.add("btn-disabled");
+    }
   }
 }
 
