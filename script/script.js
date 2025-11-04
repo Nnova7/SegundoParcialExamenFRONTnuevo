@@ -623,21 +623,83 @@ document.addEventListener("DOMContentLoaded", function () {
   // ===============================
   // IMPRIMIR CERTIFICADO
   // ===============================
-  const btnImprimir = document.getElementById("btn-imprimir");
-  if (btnImprimir) {
-    btnImprimir.addEventListener("click", function () {
-      const certificadoDisponible = localStorage.getItem("certificadoDisponible") === "true";
+  // ===============================
+// IMPRIMIR CERTIFICADO
+// ===============================
+// ===============================
+// IMPRIMIR CERTIFICADO - MÉTODO QUE FUNCIONA
+// ===============================
+const btnImprimir = document.getElementById("btn-imprimir");
+if (btnImprimir) {
+  btnImprimir.addEventListener("click", function () {
+    const certificadoDisponible = localStorage.getItem("certificadoDisponible") === "true";
+    const userData = localStorage.getItem('currentUser');
+    const currentUser = userData ? JSON.parse(userData) : null;
 
-      if (currentUser && (examApproved || certificadoDisponible)) {
-        // ✅ Generar certificado desde el backend
-        const token = localStorage.getItem("authToken");
-        const url = `http://localhost:3000/api/certificado/generate?token=${token}`;
-        window.open(url, "_blank");
-      } else {
-        showAlert("Acceso denegado", "Debes aprobar el examen para imprimir el certificado", "warning");
+    // Debug: ver qué hay en localStorage
+    console.log('🔍 Debug - Token:', localStorage.getItem('authToken'));
+    console.log('🔍 Debug - User:', currentUser);
+    console.log('🔍 Debug - Exam Approved:', examApproved);
+    console.log('🔍 Debug - Certificado Disponible:', certificadoDisponible);
+
+    if (currentUser && (examApproved || certificadoDisponible)) {
+      const token = localStorage.getItem("authToken");
+      
+      if (!token) {
+        showAlert("Error", "No hay sesión activa. Por favor inicia sesión nuevamente.", "error");
+        // Redirigir al login
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+        return;
       }
-    });
-  }
+
+      // ✅ MÉTODO 1: Usar XMLHttpRequest (más confiable para headers)
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'http://localhost:3000/api/certificate/generate', true);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.responseType = 'blob';
+      
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          // Éxito - crear y descargar PDF
+          const blob = new Blob([xhr.response], { type: 'application/pdf' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'certificado.pdf';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          showAlert("✅ Éxito", "Certificado generado correctamente", "success");
+        } else if (xhr.status === 401) {
+          showAlert("❌ Sesión expirada", "Tu sesión ha expirado. Por favor inicia sesión nuevamente.", "error");
+          // Limpiar localStorage y redirigir
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('currentUser');
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 2000);
+        } else if (xhr.status === 403) {
+          showAlert("⚠️ Acceso denegado", "No estás aprobado para generar certificado", "warning");
+        } else {
+          showAlert("❌ Error", "No se pudo generar el certificado. Error: " + xhr.status, "error");
+        }
+      };
+      
+      xhr.onerror = function() {
+        showAlert("❌ Error de conexión", "No se pudo conectar al servidor. Verifica que esté corriendo en el puerto 3000.", "error");
+      };
+      
+      xhr.send();
+      
+    } else {
+      showAlert("⚠️ Acceso denegado", "Debes aprobar el examen para imprimir el certificado", "warning");
+    }
+  });
+}
 });
 
 // ===============================
