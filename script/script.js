@@ -946,10 +946,9 @@ async function logoutBackend(usuario) {
     await fetch("http://localhost:3000/api/auth/logout", {
       method: "POST",
       headers: { 
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify({ usuario }),
+      body: JSON.stringify({ token }), 
     });
   } catch (error) {
     console.error("Error al cerrar sesión:", error);
