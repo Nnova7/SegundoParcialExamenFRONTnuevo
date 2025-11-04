@@ -381,9 +381,7 @@ footer a:hover {
   padding-top: 10px;
 }
 
-/* =========================
-   ESTILOS PARA EL EXAMEN
-   ========================= */
+/* Estlos del examen */
 
 .exam-container {
     max-width: 900px;
@@ -580,9 +578,7 @@ footer a:hover {
     color: var(--accent-color);
 }
 
-/* =========================
-   ESTILOS NUEVOS - NOSOTRAS
-   ========================= */
+/* Nosotras*/
 
 .about, .mission-vision, .team {
     margin-bottom: 50px;
@@ -696,9 +692,6 @@ footer a:hover {
     color: #666;
 }
 
-/* =========================
-   ESTILO MODERNO PARA NOSOTRAS
-   ========================= */
 
 .team-member {
     background: white;
@@ -743,9 +736,7 @@ footer a:hover {
     margin-top: 5px;
 }
 
-/* =========================
-   RESPONSIVE - EXAMEN
-   ========================= */
+/* Examen (responsive)*/
 
 @media (max-width: 768px) {
     .header-content {
@@ -831,11 +822,9 @@ footer a:hover {
     }
 }
 
-/* =========================
-   ESTILOS DE PÁGINA PRINCIPAL
-   ========================= */
+/* Página principal*/
 
-/* ----- HERO (Inicio) ----- */
+/* Hero (inicio) */
 .hero {
     background: linear-gradient(rgba(10, 10, 20, 0.6), rgba(10, 10, 20, 0.6)),
                 url("../imagenes/hero-bg.jpg") center/cover no-repeat;
@@ -907,7 +896,7 @@ footer a:hover {
     transform: translateY(-2px);
 }
 
-/* ----- SECCIÓN DE FEATURES ----- */
+/* Sección de features */
 .features {
     background-color: #f9f9f9;
     padding: 80px 20px;
@@ -943,7 +932,7 @@ footer a:hover {
     margin-bottom: 10px;
 }
 
-/* ----- TESTIMONIOS ----- */
+/* Testimonios falsos */
 .testimonials {
     background: linear-gradient(135deg, #007bff 0%, #00b8ff 100%);
     color: white;
@@ -976,7 +965,7 @@ footer a:hover {
     color: #fff;
 }
 
-/* ----- FOOTER ----- */
+/* Footer */
 footer {
     background: #0b0c10;
     color: #ccc;
@@ -1013,7 +1002,7 @@ footer {
     font-size: 0.9rem;
 }
 
-/* ----- HEADER ----- */
+/* Header*/
 header {
     background: #fff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -1092,7 +1081,7 @@ nav ul {
     background: #c0392b;
 }
 
-/* ----- ANIMACIONES ----- */
+/* Animaciones */
 @keyframes fadeInUp {
     0% {
         opacity: 0;
@@ -1104,7 +1093,7 @@ nav ul {
     }
 }
 
-/* ----- RESPONSIVE ----- */
+/* Responsive */
 @media (max-width: 768px) {
     .hero h1 {
         font-size: 2rem;
@@ -1123,9 +1112,7 @@ nav ul {
         text-align: center;
     }
 }
-/* =========================
-   ANIMACIONES ELEGANTES - INICIO
-   ========================= */
+/* Animaciones de inicio*/
 
 /* Animación de entrada del fondo (efecto zoom suave) */
 .hero {
@@ -1299,10 +1286,7 @@ nav ul {
   border: 1px solid #f5c6cb;
 }
 
-/*---------------------------------------------------------------------------*/
-/* =========================
-   BOTÓN DE EXAMEN AZUL
-   ========================= */
+/* Botón de examen azul*/
 .btn-primary {
     background: linear-gradient(135deg, #007bff, #0056b3);
     color: #fff;
@@ -1339,6 +1323,7 @@ nav ul {
   cursor: pointer;
 }
 
+/*Comentarios del examen*/
 .exam-info {
   background: #f9f9f9;
   border-radius: 8px;

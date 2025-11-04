@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", function () {
           
           if (data.token) {
             localStorage.setItem("authToken", data.token);
-            console.log("🔑 Token guardado correctamente.");
+            console.log("Token guardado correctamente.");
           }
 
           updateUserInterface();
@@ -278,16 +278,16 @@ document.addEventListener("DOMContentLoaded", function () {
   // ===============================
   async function startExam() {
     try {
-      console.log("📥 Iniciando examen desde el servidor...");
+      console.log("Iniciando examen desde el servidor...");
 
-      // Token del usuario logueado
+      //Token del usuario logueado
       const token = localStorage.getItem("authToken");
       if (!token) {
         showAlert("Sesión expirada", "Debe iniciar sesión nuevamente", "warning");
         return;
       }
 
-      // Solicitar examen al backend
+      //Solicitar examen al backend
       const res = await fetch("http://localhost:3000/api/examen/start", {
         method: "POST",
         headers: {
@@ -303,7 +303,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      // Guardar las preguntas recibidas
+      //Guardar las preguntas recibidas
       examQuestions = data.examen || [];
       console.log(`✅ ${examQuestions.length} preguntas cargadas desde el backend`);
 
@@ -312,7 +312,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      // Obtener tiempo del examen desde el backend
+      //Obtener tiempo del examen desde el backend
       try {
         const tiempoRes = await fetch("http://localhost:3000/api/examen/tiempo", {
           headers: { Authorization: `Bearer ${token}` },
@@ -322,18 +322,18 @@ document.addEventListener("DOMContentLoaded", function () {
           const tiempoData = await tiempoRes.json();
           const minutosDesdeBack = tiempoData.minutos || 20;
           examTimeLeft = minutosDesdeBack * 60;
-          console.log(`⏱ Tiempo del examen: ${minutosDesdeBack} minutos`);
+          console.log(`Tiempo del examen: ${minutosDesdeBack} minutos`);
         } else {
           throw new Error("No se pudo obtener el tiempo");
         }
       } catch (error) {
-        console.error("⚠ No se pudo obtener el tiempo desde el backend, usando valor por defecto (20 min).");
+        console.error("No se pudo obtener el tiempo desde el backend, usando valor por defecto (20 min).");
         examTimeLeft = 20 * 60;
       }
 
       updateExamTimer();
 
-      // Iniciar el temporizador
+      //Iniciar el temporizador
       if (examTimer) {
         clearInterval(examTimer);
       }
@@ -349,10 +349,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }, 1000);
 
-      // Mostrar las preguntas en pantalla
+      //Mostrar las preguntas en pantalla
       if (examModal) {
         loadExamQuestions();
-        // Mostrar usuario y fecha actual en el examen
+        //Mostrar usuario y fecha actual en el examen
         if (examUser && currentUser) {
           examUser.textContent = currentUser.nombreCompleto || currentUser.cuenta || "Invitado";
         }
@@ -367,7 +367,7 @@ document.addEventListener("DOMContentLoaded", function () {
         examModal.style.display = "flex";
       }
 
-      console.log("🚀 Examen iniciado para:", currentUser.cuenta);
+      console.log("Examen iniciado para:", currentUser.cuenta);
     } catch (error) {
       console.error("❌ Error al iniciar el examen:", error);
       showAlert("Error", "No se pudieron cargar las preguntas del examen", "error");
@@ -414,7 +414,7 @@ document.addEventListener("DOMContentLoaded", function () {
     examTimerDisplay.textContent = 
       `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-    // Cambiar color cuando quede poco tiempo
+    //Cambiar color cuando quede poco tiempo
     if (examTimeLeft < 300) { // 5 minutos
       examTimerDisplay.style.color = 'red';
       examTimerDisplay.style.fontWeight = 'bold';
@@ -443,11 +443,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // ===============================
-  // FUNCIÓN PARA ENVIAR EXAMEN (CORREGIDA)
+  // FUNCIÓN PARA ENVIAR EXAMEN 
   // ===============================
   async function submitExam() {
     try {
-      // Recopilar respuestas
+      //Recopilar respuestas
       const respuestas = [];
       const questionElements = document.querySelectorAll('.question');
       
@@ -463,14 +463,14 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
           respuestas.push({
             preguntaId: questionId,
-            respuesta: "" // Respuesta vacía si no respondió
+            respuesta: "" //Respuesta vacía si no respondió
           });
         }
       });
 
-      console.log("📤 Enviando respuestas:", respuestas);
+      console.log("Enviando respuestas:", respuestas);
 
-      // Enviar respuestas al backend
+      //Enviar respuestas al backend
       const token = localStorage.getItem('authToken');
       const response = await fetch('http://localhost:3000/api/examen/submit', {
         method: 'POST',
@@ -486,39 +486,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
       const data = await response.json();
 
-      // ✅ DEBUG: Mostrar respuesta completa del backend
-      console.log("🔍 RESPUESTA COMPLETA DEL BACKEND:", data);
-      console.log("📋 PROPIEDADES DISPONIBLES:", Object.keys(data));
-      console.log("❓ ¿Existe data.aprobado?:", 'aprobado' in data);
-      console.log("🎯 Valor de data.aprobado:", data.aprobado);
+      //Mostrar respuesta completa del backend
+      console.log("RESPUESTA COMPLETA DEL BACKEND:", data);
+      console.log("PROPIEDADES DISPONIBLES:", Object.keys(data));
+      console.log("¿Existe data.aprobado?:", 'aprobado' in data);
+      console.log("Valor de data.aprobado:", data.aprobado);
 
       if (response.ok) {
-        // Limpiar temporizador
+        //Limpiar temporizador
         if (examTimer) {
           clearInterval(examTimer);
           examTimer = null;
         }
 
-        // ✅ CORREGIDO: Manejo robusto de la propiedad aprobado
         examApproved = data.aprobado !== undefined ? data.aprobado : false;
         examTaken = true;
         
         localStorage.setItem('examTaken', 'true');
         localStorage.setItem('examApproved', examApproved.toString());
 
-        // Actualizar usuario actual
+        //Actualizar usuario actual
         if (currentUser) {
           currentUser.intento = true;
           currentUser.aprobado = examApproved;
           localStorage.setItem('currentUser', JSON.stringify(currentUser));
         }
 
-        // Cerrar modal
+        //Cerrar modal
         const examModal = document.getElementById('exam-modal');
         if (examModal) examModal.style.display = 'none';
 
-        // Mostrar resultado con información detallada
-        console.log("📊 Resultado final del examen:", {
+        //Mostrar resultado con información detallada
+        console.log("Resultado final del examen:", {
           aprobado: examApproved,
           calificacion: data.calificacion,
           aciertos: data.aciertos,
@@ -534,10 +533,10 @@ document.addEventListener("DOMContentLoaded", function () {
           examApproved ? 'success' : 'error'
         );
 
-        // Actualizar interfaz
+        //Actualizar interfaz
         updateUserInterface();
 
-        // Si aprobó, mostrar botón de certificado
+        //Si aprobó, mostrar botón de certificado
         if (examApproved) {
           const printBtn = document.getElementById("btn-imprimir");
           if (printBtn) {
@@ -635,176 +634,169 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
+
   // ===============================
   // IMPRIMIR CERTIFICADO
   // ===============================
-  // ===============================
-// IMPRIMIR CERTIFICADO
-// ===============================
-// ===============================
-// IMPRIMIR CERTIFICADO - MÉTODO QUE FUNCIONA
-// ===============================
-const btnImprimir = document.getElementById("btn-imprimir");
-if (btnImprimir) {
-  btnImprimir.addEventListener("click", function () {
-    const certificadoDisponible = localStorage.getItem("certificadoDisponible") === "true";
-    const userData = localStorage.getItem('currentUser');
-    const currentUser = userData ? JSON.parse(userData) : null;
+  const btnImprimir = document.getElementById("btn-imprimir");
+  if (btnImprimir) {
+    btnImprimir.addEventListener("click", function () {
+      const certificadoDisponible = localStorage.getItem("certificadoDisponible") === "true";
+      const userData = localStorage.getItem('currentUser');
+      const currentUser = userData ? JSON.parse(userData) : null;
 
-    // Debug: ver qué hay en localStorage
-    console.log('🔍 Debug - Token:', localStorage.getItem('authToken'));
-    console.log('🔍 Debug - User:', currentUser);
-    console.log('🔍 Debug - Exam Approved:', examApproved);
-    console.log('🔍 Debug - Certificado Disponible:', certificadoDisponible);
+      // Debug: ver qué hay en localStorage
+      console.log('Debug - Token:', localStorage.getItem('authToken'));
+      console.log('Debug - User:', currentUser);
+      console.log('Debug - Exam Approved:', examApproved);
+      console.log('Debug - Certificado Disponible:', certificadoDisponible);
 
-    if (currentUser && (examApproved || certificadoDisponible)) {
-      const token = localStorage.getItem("authToken");
-      
-      if (!token) {
-        showAlert("Error", "No hay sesión activa. Por favor inicia sesión nuevamente.", "error");
-        // Redirigir al login
-        setTimeout(() => {
-          window.location.href = 'login.html';
-        }, 2000);
-        return;
-      }
-
-      // ✅ MÉTODO 1: Usar XMLHttpRequest (más confiable para headers)
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', 'http://localhost:3000/api/certificate/generate', true);
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-      xhr.responseType = 'blob';
-      
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          // Éxito - crear y descargar PDF
-          const blob = new Blob([xhr.response], { type: 'application/pdf' });
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'certificado.pdf';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-          
-          showAlert("✅ Éxito", "Certificado generado correctamente", "success");
-        } else if (xhr.status === 401) {
-          showAlert("❌ Sesión expirada", "Tu sesión ha expirado. Por favor inicia sesión nuevamente.", "error");
-          // Limpiar localStorage y redirigir
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('currentUser');
+      if (currentUser && (examApproved || certificadoDisponible)) {
+        const token = localStorage.getItem("authToken");
+        
+        if (!token) {
+          showAlert("Error", "No hay sesión activa. Por favor inicia sesión nuevamente.", "error");
+          //Redirigir al login
           setTimeout(() => {
             window.location.href = 'login.html';
           }, 2000);
-        } else if (xhr.status === 403) {
-          showAlert("⚠️ Acceso denegado", "No estás aprobado para generar certificado", "warning");
-        } else {
-          showAlert("❌ Error", "No se pudo generar el certificado. Error: " + xhr.status, "error");
+          return;
         }
-      };
-      
-      xhr.onerror = function() {
-        showAlert("❌ Error de conexión", "No se pudo conectar al servidor. Verifica que esté corriendo en el puerto 3000.", "error");
-      };
-      
-      xhr.send();
-      
-    } else {
-      showAlert("⚠️ Acceso denegado", "Debes aprobar el examen para imprimir el certificado", "warning");
-    }
+
+        //MÉTODO 1: Usar XMLHttpRequest (más confiable para headers)
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'http://localhost:3000/api/certificate/generate', true);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.responseType = 'blob';
+        
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            //Éxito - crear y descargar PDF
+            const blob = new Blob([xhr.response], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'certificado.pdf';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showAlert("Éxito", "Certificado generado correctamente", "success");
+          } else if (xhr.status === 401) {
+            showAlert("❌ Sesión expirada", "Tu sesión ha expirado. Por favor inicia sesión nuevamente.", "error");
+            // Limpiar localStorage y redirigir
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            setTimeout(() => {
+              window.location.href = 'login.html';
+            }, 2000);
+          } else if (xhr.status === 403) {
+            showAlert("Acceso denegado", "No estás aprobado para generar certificado", "warning");
+          } else {
+            showAlert("❌ Error", "No se pudo generar el certificado. Error: " + xhr.status, "error");
+          }
+        };
+        
+        xhr.onerror = function() {
+          showAlert("❌ Error de conexión", "No se pudo conectar al servidor. Verifica que esté corriendo en el puerto 3000.", "error");
+        };
+        
+        xhr.send();
+        
+      } else {
+        showAlert("Acceso denegado", "Debes aprobar el examen para imprimir el certificado", "warning");
+      }
+    });
+  }
   });
-}
-});
 
-// ===============================
-// FUNCIÓN: CARGAR SESIÓN
-// ===============================
-async function loadSession() {
-  const savedUser = localStorage.getItem("currentUser");
-  const savedToken = localStorage.getItem("authToken");
-  
-  if (savedUser && savedToken) {
-    try {
-      currentUser = JSON.parse(savedUser);
-      paymentStatus = localStorage.getItem("paymentStatus") === "true";
-      examTaken = localStorage.getItem("examTaken") === "true";
-      examApproved = localStorage.getItem("examApproved") === "true";
+  // ===============================
+  // FUNCIÓN: CARGAR SESIÓN
+  // ===============================
+  async function loadSession() {
+    const savedUser = localStorage.getItem("currentUser");
+    const savedToken = localStorage.getItem("authToken");
+    
+    if (savedUser && savedToken) {
+      try {
+        currentUser = JSON.parse(savedUser);
+        paymentStatus = localStorage.getItem("paymentStatus") === "true";
+        examTaken = localStorage.getItem("examTaken") === "true";
+        examApproved = localStorage.getItem("examApproved") === "true";
 
-      // Verificar token con el backend
-      const verifyRes = await fetch("http://localhost:3000/api/auth/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${savedToken}`
-        }
-      });
-
-      if (verifyRes.ok) {
-        // Token válido, sincronizar datos del usuario
-        const userRes = await fetch(`http://localhost:3000/api/auth/user`, {
+        // Verificar token con el backend
+        const verifyRes = await fetch("http://localhost:3000/api/auth/verify", {
+          method: "POST",
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${savedToken}`
           }
         });
 
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          // Actualizar datos locales con los del servidor
-          if (userData.usuario) {
-            paymentStatus = userData.usuario.pago || false;
-            examTaken = userData.usuario.intento || false;
-            examApproved = userData.usuario.aprobado || false;
-            
-            // Actualizar currentUser
-            currentUser.pago = paymentStatus;
-            currentUser.intento = examTaken;
-            currentUser.aprobado = examApproved;
-            
-            // Actualizar localStorage
-            localStorage.setItem("currentUser", JSON.stringify(currentUser));
-            localStorage.setItem("paymentStatus", paymentStatus.toString());
-            localStorage.setItem("examTaken", examTaken.toString());
-            localStorage.setItem("examApproved", examApproved.toString());
+        if (verifyRes.ok) {
+          // Token válido, sincronizar datos del usuario
+          const userRes = await fetch(`http://localhost:3000/api/auth/user`, {
+            headers: {
+              Authorization: `Bearer ${savedToken}`
+            }
+          });
+
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            // Actualizar datos locales con los del servidor
+            if (userData.usuario) {
+              paymentStatus = userData.usuario.pago || false;
+              examTaken = userData.usuario.intento || false;
+              examApproved = userData.usuario.aprobado || false;
+              
+              // Actualizar currentUser
+              currentUser.pago = paymentStatus;
+              currentUser.intento = examTaken;
+              currentUser.aprobado = examApproved;
+              
+              // Actualizar localStorage
+              localStorage.setItem("currentUser", JSON.stringify(currentUser));
+              localStorage.setItem("paymentStatus", paymentStatus.toString());
+              localStorage.setItem("examTaken", examTaken.toString());
+              localStorage.setItem("examApproved", examApproved.toString());
+            }
           }
+        } else {
+          // Token inválido, limpiar sesión
+          console.warn("Token inválido, limpiando sesión");
+          paymentStatus = false;
+          examTaken = false;
+          examApproved = false;
         }
-      } else {
-        // Token inválido, limpiar sesión
-        console.warn("Token inválido, limpiando sesión");
-        //localStorage.clear();
-        //currentUser = null;
-        paymentStatus = false;
-        examTaken = false;
-        examApproved = false;
+      } catch (error) {
+        console.warn("⚠️ Error verificando sesión, usando datos locales:", error);
+        // En caso de error, usar datos locales
+        currentUser = JSON.parse(savedUser);
+        paymentStatus = localStorage.getItem("paymentStatus") === "true";
+        examTaken = localStorage.getItem("examTaken") === "true";
+        examApproved = localStorage.getItem("examApproved") === "true";
       }
-    } catch (error) {
-      console.warn("⚠️ Error verificando sesión, usando datos locales:", error);
-      // En caso de error, usar datos locales
-      currentUser = JSON.parse(savedUser);
-      paymentStatus = localStorage.getItem("paymentStatus") === "true";
-      examTaken = localStorage.getItem("examTaken") === "true";
-      examApproved = localStorage.getItem("examApproved") === "true";
-    }
 
-    updateUserInterface();
+      updateUserInterface();
 
-    //Refresca el header siempre, incluso tras recargar o cambiar página
-    const userDisplay = document.getElementById("user-display");
-    if (userDisplay && currentUser) {
-      userDisplay.textContent = currentUser.cuenta || currentUser.nombreCompleto || "Usuario";
+      //Refresca el header siempre, incluso tras recargar o cambiar página
+      const userDisplay = document.getElementById("user-display");
+      if (userDisplay && currentUser) {
+        userDisplay.textContent = currentUser.cuenta || currentUser.nombreCompleto || "Usuario";
+      }
+      console.log("Sesión cargada para:", currentUser?.nombreCompleto);
+    }else {
+      //Si no hay sesión activa
+      const userDisplay = document.getElementById("user-display");
+      if (userDisplay) userDisplay.textContent = "Invitado";
     }
-    console.log("Sesión cargada para:", currentUser?.nombreCompleto);
-  }else {
-    //Si no hay sesión activa
-    const userDisplay = document.getElementById("user-display");
-    if (userDisplay) userDisplay.textContent = "Invitado";
   }
-}
 
-// ===============================
-// ACTUALIZAR INTERFAZ DE USUARIO
-// ===============================
-function updateUserInterface() {
+  // ===============================
+  // ACTUALIZAR INTERFAZ DE USUARIO
+  // ===============================
+  function updateUserInterface() {
   const userDisplay = document.getElementById("user-display");
   const loginBtn = document.getElementById("login-btn");
   const logoutBtn = document.getElementById("logout-btn");
@@ -838,7 +830,7 @@ function updateUserInterface() {
       }
     }
 
-    // Actualizar botón de examen
+    //Actualizar botón de examen
     if (examBtn) {
       if (examTaken) {
         examBtn.textContent = "Examen Realizado";
@@ -858,18 +850,18 @@ function updateUserInterface() {
       }
     }
 
-    // Actualizar botón de imprimir
+    //Actualizar botón de imprimir
     if (printBtn) {
       printBtn.style.display = examApproved ? "inline-block" : "none";
     }
 
-    // Verificar si el certificado está disponible en localStorage
+    //Verificar si el certificado está disponible en localStorage
     const certificadoDisponible = localStorage.getItem("certificadoDisponible") === "true";
     if (printBtn) {
       printBtn.style.display = (examApproved || certificadoDisponible) ? "inline-block" : "none";
     }
   } else {
-    // Usuario no logueado
+    //Usuario no logueado
     if (userDisplay) userDisplay.textContent = "Invitado";
     if (loginBtn) loginBtn.style.display = "inline-block";
     if (logoutBtn) logoutBtn.style.display = "none";
