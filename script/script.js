@@ -374,32 +374,35 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // ===============================
-  // CARGAR PREGUNTAS DEL EXAMEN
-  // ===============================
-  function loadExamQuestions() {
-    if (!examQuestionsContainer) return;
+ // ===============================
+// CARGAR PREGUNTAS DEL EXAMEN
+// ===============================
+function loadExamQuestions() {
+  if (!examQuestionsContainer) return;
 
-    let questionsHTML = '';
-    examQuestions.forEach((q, index) => {
-      questionsHTML += `
-        <div class="question" data-question-id="${q.id}">
-          <h3>Pregunta ${index + 1}: ${q.texto || 'Pregunta sin texto'}</h3>
-          <div class="options">
-            ${(q.opciones || []).map(option => `
-              <label class="option">
-                <input type="radio" name="question-${q.id}" value="${option}">
-                ${option}
-              </label>
-            `).join('')}
-          </div>
+  let questionsHTML = '';
+  examQuestions.forEach((q, index) => {
+  const shuffledOptions = (q.opciones || []).sort(() => Math.random() - 0.5);
+
+    questionsHTML += `
+      <div class="question" data-question-id="${q.id}">
+        <h3>Pregunta ${index + 1}: ${q.texto || 'Pregunta sin texto'}</h3>
+        <div class="options">
+          ${shuffledOptions.map(option => `
+            <label class="option">
+              <input type="radio" name="question-${q.id}" value="${option}">
+              ${option}
+            </label>
+          `).join('')}
         </div>
-        <hr>
-      `;
-    });
+      </div>
+      <hr>
+    `;
+  });
 
-    examQuestionsContainer.innerHTML = questionsHTML;
-  }
+  examQuestionsContainer.innerHTML = questionsHTML;
+}
+
 
   // ===============================
   // ACTUALIZAR TIMER DEL EXAMEN
