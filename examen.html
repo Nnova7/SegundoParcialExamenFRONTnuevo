@@ -24,43 +24,53 @@
     </header>
 
     <main class="container">
-        <div id="exam-content" style="display: none;">
-            <h1>Examen de Certificación JavaScript</h1>
-            <div class="exam-info">
-                <p><strong>Duración:</strong> 3 horas</p>
-                <p><strong>Preguntas:</strong> 50</p>
-                <p><strong>Puntuación mínima:</strong> 70%</p>
-            </div>
-            
-            <div class="exam-questions">
-                <h2>Preguntas del Examen</h2>
-                <!-- Aquí van las preguntas del examen -->
-                <div class="question">
-                    <p>1. ¿Qué es JavaScript?</p>
-                    <input type="radio" name="q1" value="a"> a) Un lenguaje de programación<br>
-                    <input type="radio" name="q1" value="b"> b) Un framework de CSS<br>
-                    <input type="radio" name="q1" value="c"> c) Una base de datos<br>
-                </div>
-                
-                <div class="question">
-                    <p>2. ¿Cómo se declara una variable en JavaScript?</p>
-                    <input type="radio" name="q2" value="a"> a) var, let, const<br>
-                    <input type="radio" name="q2" value="b"> b) variable<br>
-                    <input type="radio" name="q2" value="c"> c) def<br>
-                </div>
-                
-                <!-- Agrega más preguntas según necesites -->
-            </div>
-            
-            <button onclick="submitExam()" class="btn-primary">Enviar Examen</button>
-        </div>
-        
         <div id="access-denied" style="display: none; text-align: center; padding: 2rem;">
             <h2>Acceso Denegado</h2>
             <p>No tienes acceso a esta página. Debes iniciar el examen desde la página de certificaciones.</p>
             <button onclick="goToCertifications()" class="btn-primary">Volver a Certificaciones</button>
         </div>
     </main>
+    <!-- Footer -->
+    <footer>
+    <div class="container">
+        <div class="footer-content">
+
+        <div class="footer-logo-section">
+            <img src="imagenes/logo.png" alt="ProgramaCert Logo" class="footer-logo">
+            <div class="footer-logo-text">
+            <h3>ProgramaCert</h3>
+            <p>Tu puerta de entrada al reconocimiento profesional en el sector tecnológico.</p>
+            <p>Con ProgramaCert valida, certifica y destáca.</p>
+            </div>
+        </div>
+
+        <div class="footer-section">
+            <h3>Enlaces Rápidos</h3>
+            <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="certificados.html">Certificaciones</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="nosotros.html">Nosotros</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-section">
+            <h3>Contacto</h3>
+            <p>Email: programacert@gmail.com</p>
+            <p>
+            <a href="https://www.instagram.com/programacert?utm_source=qr&igsh=ajkycWZlODN2ZjFh" target="_blank">
+                Instagram: @programacert
+            </a>
+            </p>
+            <p>Dirección: 123 Tech Avenue, Silicon Valley, CA</p>
+        </div>
+        </div>
+
+        <div class="copyright">
+        <p>&copy; 2025 ProgramaCert. Todos los derechos reservados.</p>
+        </div>
+    </div>
+    </footer>
     <script src="script/script.js"></script>
 </body>
 </html>

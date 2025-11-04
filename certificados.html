@@ -252,66 +252,96 @@
     </div>
 
     <!-- Modal del Examen -->
-<div id="exam-modal" class="modal" style="display: none;">
-  <div class="modal-content exam-modal">
-    <span class="close-modal close-exam-modal">&times;</span>
-    <h2>Examen de Certificación JavaScript</h2>
-    
-    <div class="exam-header">
-      <div class="exam-timer">
-        <strong>Tiempo restante: </strong>
-        <span id="exam-timer">20:00</span>
-      </div>
-      <div class="exam-instructions">
-        <p><strong>Instrucciones:</strong></p>
-        <ul>
-          <li>Tienes 20 minutos para completar el examen</li>
-          <li>Responde todas las preguntas</li>
-          <li>No puedes salir del examen una vez iniciado</li>
-          <li>El examen se enviará automáticamente al terminar el tiempo</li>
-        </ul>
-      </div>
-    </div>
+    <div id="exam-modal" class="modal" style="display: none;">
+    <div class="modal-content exam-modal">
+        <span class="close-modal close-exam-modal">&times;</span>
+        <h2>Examen de Certificación JavaScript</h2>
+        
+        <!-- Info del usuario -->
+        <div class="exam-info">
+            <div class="exam-logo">
+                <img src="imagenes/logo.png" alt="Logo ProgramaCert">
+            </div>
+            <div class="exam-details">
+                <p><strong>Usuario:</strong> <span id="exam-user"></span></p>
+                <p><strong>Fecha:</strong> <span id="exam-date"></span></p>
+                <p><strong>Certificación completa que abarca JavaScript moderno <br>(ES6+), tanto en frontend como backend. Incluye <br>conceptos avanzados, patrones de diseño, y herramientas <br>del ecosistema JavaScript. </strong> </span></p>
+            </div>
+        </div>
 
-    <div id="exam-questions" class="exam-questions">
-      <!-- Las preguntas se cargarán aquí dinámicamente -->
-    </div>
+        <div class="exam-header">
+        <div class="exam-timer">
+            <strong>Tiempo restante: </strong>
+            <span id="exam-timer">20:00</span>
+        </div>
+        <div class="exam-instructions">
+            <p><strong>Instrucciones:</strong></p>
+            <ul>
+            <li>Tienes 20 minutos para completar el examen</li>
+            <li>Responde todas las preguntas</li>
+            <li>No puedes salir del examen una vez iniciado</li>
+            <li>El examen se enviará automáticamente al terminar el tiempo</li>
+            </ul>
+        </div>
+        </div>
 
-    <div class="exam-actions">
-      <button id="submit-exam-btn" class="btn-primary">Enviar Examen</button>
+        <div id="exam-questions" class="exam-questions">
+        <!-- Las preguntas se cargarán aquí dinámicamente -->
+        </div>
+
+        <div class="exam-actions">
+        <button id="submit-exam-btn" class="btn-primary">Enviar Examen</button>
+        </div>
+
+        <!-- Pie de página -->
+        <div class="exam-footer">
+        <hr>
+        <p>Examen generado por el sistema</p>
+        <p>© 2025 Certificación JavaScript</p>
+        </div>
     </div>
-  </div>
-</div>
+    </div>
 
     <!-- Footer -->
     <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>ProgramaCert</h3>
-                    <p>Tu puerta de entrada al reconocimiento profesional en el sector tecnológico.</p>
-                    <p>Con ProgramaCert valida, certifica y destáca.</p>
-                </div>
-                <div class="footer-section">
-                    <h3>Enlaces Rápidos</h3>
-                    <ul>
-                        <li><a href="index.html">Inicio</a></li>
-                        <li><a href="certificados.html">Certificaciones</a></li>
-                        <li><a href="contacto.html">Contacto</a></li>
-                        <li><a href="nosotros.html">Nosotros</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h3>Contacto</h3>
-                    <p>Email: programacert@gmail.com</p>
-                    <p><a href="https://www.instagram.com/programacert?utm_source=qr&igsh=ajkycWZlODN2ZjFh" target="_blank">Instagram: @programacert</a></p>
-                    <p>Dirección: 123 Tech Avenue, Silicon Valley, CA</p>
-                </div>
-            </div>
-            <div class="copyright">
-                <p>&copy; 2025 ProgramaCert. Todos los derechos reservados.</p>
+    <div class="container">
+        <div class="footer-content">
+
+        <div class="footer-logo-section">
+            <img src="imagenes/logo.png" alt="ProgramaCert Logo" class="footer-logo">
+            <div class="footer-logo-text">
+            <h3>ProgramaCert</h3>
+            <p>Tu puerta de entrada al reconocimiento profesional en el sector tecnológico.</p>
+            <p>Con ProgramaCert valida, certifica y destáca.</p>
             </div>
         </div>
+
+        <div class="footer-section">
+            <h3>Enlaces Rápidos</h3>
+            <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="certificados.html">Certificaciones</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="nosotros.html">Nosotros</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-section">
+            <h3>Contacto</h3>
+            <p>Email: programacert@gmail.com</p>
+            <p>
+            <a href="https://www.instagram.com/programacert?utm_source=qr&igsh=ajkycWZlODN2ZjFh" target="_blank">
+                Instagram: @programacert
+            </a>
+            </p>
+            <p>Dirección: 123 Tech Avenue, Silicon Valley, CA</p>
+        </div>
+        </div>
+
+        <div class="copyright">
+        <p>&copy; 2025 ProgramaCert. Todos los derechos reservados.</p>
+        </div>
+    </div>
     </footer>
 
     <script src="script/script.js"></script>

@@ -33,12 +33,14 @@ document.addEventListener("DOMContentLoaded", function () {
   const examQuestionsContainer = document.getElementById("exam-questions");
   const submitExamBtn = document.getElementById("submit-exam-btn");
   const closeExamModal = document.querySelector(".close-exam-modal");
+  const examUser = document.getElementById("exam-user");
+  const examDate = document.getElementById("exam-date");
 
   // ===============================
   // CARGAR SESIÓN GUARDADA
   // ===============================
   loadSession();
-
+  
   // ===============================
   // BOTÓN EXPLORAR CERTIFICACIONES
   // ===============================
@@ -82,9 +84,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         const data = await response.json();
+        console.log("Respuesta completa del backend:", data);
 
         if (response.ok && data.usuario) {
-          // ✅ Guardar usuario y token
+          //Guardar usuario y token
           currentUser = {
             cuenta: data.usuario.cuenta,
             nombreCompleto: data.usuario.nombre,
@@ -349,6 +352,18 @@ document.addEventListener("DOMContentLoaded", function () {
       // Mostrar las preguntas en pantalla
       if (examModal) {
         loadExamQuestions();
+        // Mostrar usuario y fecha actual en el examen
+        if (examUser && currentUser) {
+          examUser.textContent = currentUser.nombreCompleto || currentUser.cuenta || "Invitado";
+        }
+        if (examDate) {
+          const today = new Date();
+          const formattedDate = today.toLocaleDateString('es-MX', {
+            year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+          });
+          examDate.textContent = formattedDate;
+        }
         examModal.style.display = "flex";
       }
 
@@ -772,7 +787,17 @@ async function loadSession() {
     }
 
     updateUserInterface();
+
+    //Refresca el header siempre, incluso tras recargar o cambiar página
+    const userDisplay = document.getElementById("user-display");
+    if (userDisplay && currentUser) {
+      userDisplay.textContent = currentUser.cuenta || currentUser.nombreCompleto || "Usuario";
+    }
     console.log("Sesión cargada para:", currentUser?.nombreCompleto);
+  }else {
+    //Si no hay sesión activa
+    const userDisplay = document.getElementById("user-display");
+    if (userDisplay) userDisplay.textContent = "Invitado";
   }
 }
 
@@ -787,8 +812,14 @@ function updateUserInterface() {
   const examBtn = document.getElementById("exam-btn-fullstack");
   const printBtn = document.getElementById("btn-imprimir");
 
+  // Leer usuario actual desde localStorage si no está en memoria
+  if (!currentUser) {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) currentUser = JSON.parse(storedUser);
+  }
+  
   if (currentUser) {
-    if (userDisplay) userDisplay.textContent = currentUser.cuenta || currentUser.nombreCompleto || "Usuario";
+    if (userDisplay) userDisplay.textContent = `👤 ${currentUser.cuenta || currentUser.nombreCompleto || "Usuario"}`;
     if (loginBtn) loginBtn.style.display = "none";
     if (logoutBtn) logoutBtn.style.display = "inline-block";
 
@@ -856,6 +887,27 @@ function updateUserInterface() {
     if (printBtn) printBtn.style.display = "none";
   }
 }
+
+// ===============================
+// MOSTRAR USUARIO ACTIVO EN HEADER EN TODAS LAS PÁGINAS
+// ===============================
+document.addEventListener("DOMContentLoaded", () => {
+  const savedUser = localStorage.getItem("currentUser");
+  const userDisplay = document.getElementById("user-display");
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  if (savedUser) {
+    const user = JSON.parse(savedUser);
+    if (userDisplay) userDisplay.textContent = user.cuenta || user.nombreCompleto;
+    if (loginBtn) loginBtn.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "inline-block";
+  } else {
+    if (userDisplay) userDisplay.textContent = "Invitado";
+    if (loginBtn) loginBtn.style.display = "inline-block";
+    if (logoutBtn) logoutBtn.style.display = "none";
+  }
+});
 
 // ===============================
 // FUNCIONES AUXILIARES
