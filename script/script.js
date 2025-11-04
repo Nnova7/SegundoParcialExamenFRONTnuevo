@@ -6,7 +6,7 @@ let paymentStatus = false;
 let examTaken = false;
 let contactMessages = [];
 let examTimer = null;
-let examTimeLeft = 10800; // 3 horas
+let examTimeLeft = 1200; // 20 min 
 let examQuestions = [];
 let examApproved = false;
 
@@ -38,6 +38,18 @@ document.addEventListener("DOMContentLoaded", function () {
   // CARGAR SESIÓN GUARDADA
   // ===============================
   loadSession();
+
+  // ===============================
+  // BOTÓN EXPLORAR CERTIFICACIONES
+  // ===============================
+  const explorarBtn = document.getElementById("explorar-btn");
+
+  if (explorarBtn) {
+    explorarBtn.addEventListener("click", function () {
+      // Redirige a la página de certificaciones
+      window.location.href = "certificados.html";
+    });
+  }
 
   // ===============================
   // ABRIR / CERRAR MODAL DE LOGIN
@@ -138,7 +150,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      // 🧹 Limpiar datos
+      //Limpiar datos
       currentUser = null;
       paymentStatus = false;
       examTaken = false;
@@ -510,6 +522,18 @@ document.addEventListener("DOMContentLoaded", function () {
         // Actualizar interfaz
         updateUserInterface();
 
+        // Si aprobó, mostrar botón de certificado
+        if (examApproved) {
+          const printBtn = document.getElementById("btn-imprimir");
+          if (printBtn) {
+            printBtn.style.display = "inline-block";
+          }
+
+          localStorage.setItem("certificadoDisponible", "true");
+        } else {
+          localStorage.setItem("certificadoDisponible", "false");
+        }
+
       } else {
         showAlert('Error', data.msg || 'Error al enviar el examen', 'error');
       }
@@ -584,7 +608,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // ===============================
   window.addEventListener("click", (e) => {
     if (e.target === loginModal) loginModal.style.display = "none";
-    if (e.target === examModal) {
+    if (examModal && examModal.style.display === "flex" && e.target === examModal) {
       const confirmacion = confirm("¿Estás seguro de que deseas cerrar? El progreso del examen se perderá.");
       if (confirmacion) {
         if (examTimer) {
@@ -602,8 +626,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const btnImprimir = document.getElementById("btn-imprimir");
   if (btnImprimir) {
     btnImprimir.addEventListener("click", function () {
-      if (currentUser && examApproved) {
-        window.print();
+      const certificadoDisponible = localStorage.getItem("certificadoDisponible") === "true";
+
+      if (currentUser && (examApproved || certificadoDisponible)) {
+        // ✅ Generar certificado desde el backend
+        const token = localStorage.getItem("authToken");
+        const url = `http://localhost:3000/api/certificado/generate?token=${token}`;
+        window.open(url, "_blank");
       } else {
         showAlert("Acceso denegado", "Debes aprobar el examen para imprimir el certificado", "warning");
       }
@@ -665,8 +694,8 @@ async function loadSession() {
       } else {
         // Token inválido, limpiar sesión
         console.warn("Token inválido, limpiando sesión");
-        localStorage.clear();
-        currentUser = null;
+        //localStorage.clear();
+        //currentUser = null;
         paymentStatus = false;
         examTaken = false;
         examApproved = false;
@@ -739,6 +768,12 @@ function updateUserInterface() {
     // Actualizar botón de imprimir
     if (printBtn) {
       printBtn.style.display = examApproved ? "inline-block" : "none";
+    }
+
+    // Verificar si el certificado está disponible en localStorage
+    const certificadoDisponible = localStorage.getItem("certificadoDisponible") === "true";
+    if (printBtn) {
+      printBtn.style.display = (examApproved || certificadoDisponible) ? "inline-block" : "none";
     }
   } else {
     // Usuario no logueado
@@ -818,7 +853,7 @@ async function logoutBackend(usuario) {
 
 async function enviarContactoBackend(nombre, correo, mensaje) {
   try {
-    const res = await fetch("http://localhost:3000/api/contacto", {
+    const res = await fetch("http://localhost:3000/api/contacto/enviar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, email: correo, mensaje }),
